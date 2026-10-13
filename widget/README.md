@@ -51,14 +51,15 @@ Dentro de `index.html`, al inicio del `<script>`, está esto:
 
 ```js
 const CONFIG = {
-  FUENTE_DATOS: "mock-api/localidades.json",
+  FUENTE_DATOS: "mock-api/datos_reales_localidades.json",
   // FUENTE_DATOS: "https://<dominio-consultorio>/api/geolocalizacion/localidades",
-  DATOS_DE_EJEMPLO: true,
+  DATOS_DE_EJEMPLO: false,
 };
 ```
 
-Hay que poner la URL real en `FUENTE_DATOS` y cambiar `DATOS_DE_EJEMPLO` a
-`false` (quita el aviso de datos de ejemplo del encabezado).
+Hay que poner la URL real en `FUENTE_DATOS`. `DATOS_DE_EJEMPLO: true` muestra
+un aviso de "datos de ejemplo" en el encabezado; úselo solo si apunta a
+`mock-api/localidades.json`.
 
 No hay que cambiar nada más. El resto del widget (coloreado, leyenda,
 tooltips, manejo de errores) ya está escrito de forma genérica y no depende
@@ -69,9 +70,16 @@ Contrato esperado de esa API — debe responder un arreglo JSON así:
 ```json
 [
   { "codigo_loc": "8", "nombre": "Kennedy", "cantidad": 196 },
-  { "codigo_loc": "10", "nombre": "Engativá", "cantidad": 176 }
+  { "codigo_loc": "10", "nombre": "Engativá", "cantidad": 176 },
+  { "codigo_loc": "13", "nombre": "Teusaquillo", "cantidad": null, "menos_de": 5 }
 ]
 ```
+
+Las localidades con entre 1 y 4 personas se envían **sin el número exacto**
+(`"cantidad": null, "menos_de": 5`) y el mapa muestra "menos de 5". Así nadie
+puede deducir quién se inscribió en una localidad con muy pocas personas. Esto
+tiene que hacerlo quien genera los datos (el script o la API), no el mapa: si
+el número exacto viajara en el JSON, cualquiera podría verlo.
 
 `codigo_loc` es el código DANE de la localidad (1 a 20), que es el campo que
 cruza con la geometría del mapa — por eso es más confiable que cruzar por
@@ -81,18 +89,25 @@ widget (si quedan en dominios distintos), ya que el navegador bloquea por
 defecto peticiones entre dominios distintos si el backend no lo permite
 explícitamente.
 
-## Cómo probarlo con una distribución real (sin usar datos reales en el repo)
+## Datos reales: cómo se generan
 
-Mientras no exista la API real, se puede generar una distribución más
-realista a partir del Excel del Consultorio. El script lee ÚNICAMENTE:
+Mientras no exista la API real, el mapa usa un conteo generado a partir del
+Excel de inscripción del Consultorio con `scripts/agregar_localidades_reales.py`.
+
+Regla de privacidad: **se pueden usar y publicar datos reales, pero solo como
+conteo de personas por localidad**. El Excel y cualquier dato de una persona
+nunca entran al repositorio (`*.xlsx` está en `.gitignore`).
+
+El script lee ÚNICAMENTE:
 
 - las columnas cuyo encabezado contiene "Localidad";
 - "Número de Identificación" y "Hora de inicio", solo para quitar
   inscripciones repetidas de una misma persona (se conserva la más reciente).
   Se usan únicamente en memoria: nunca se imprimen ni se guardan.
 
-El resto de columnas (nombre, teléfono, correo, etc.) nunca se cargan, y la
-salida es solo un conteo de personas por localidad.
+El resto de columnas (nombre, teléfono, correo, etc.) nunca se cargan.
+
+Para actualizar los datos (por ejemplo, con un Excel nuevo):
 
 1. Desde la **raíz del repositorio** (no desde `widget/`), con un entorno
    virtual de Python (solo la primera vez: `python3 -m venv .venv` y
@@ -102,27 +117,24 @@ salida es solo un conteo de personas por localidad.
    .venv/bin/python widget/scripts/agregar_localidades_reales.py "/ruta/al/Excel.xlsx"
    ```
 
-   Genera `widget/datos_reales_localidades.json` e imprime en pantalla los
-   valores de localidad que no pudo emparejar con las 20 oficiales (por
-   ejemplo, localidades de otras ciudades). Esos no se cuentan.
+   Sobrescribe `widget/mock-api/datos_reales_localidades.json` e imprime en
+   pantalla cuántas inscripciones repetidas quitó, qué localidades quedaron
+   como "menos de 5" y los valores de localidad que no pudo emparejar con las
+   20 oficiales (por ejemplo, de otras ciudades). Esos no se cuentan.
 
-   El archivo tiene el mismo formato que `mock-api/localidades.json` (el
-   contrato de la API).
+2. Revise el archivo generado (solo debe tener `codigo_loc`, `nombre`,
+   `cantidad` y, a veces, `menos_de`) y súbalo con un commit: GitHub Pages lo
+   publica solo.
 
-2. Ese archivo está en `.gitignore` (igual que cualquier `.xlsx`): no se sube.
-   Para comprobarlo: `git check-ignore -v widget/datos_reales_localidades.json`.
-3. Cambie **temporalmente** `CONFIG.FUENTE_DATOS` en `index.html` a
-   `"datos_reales_localidades.json"`, corra `npm run mock-api` y abra
-   `http://localhost:3001/index.html`.
-4. Al terminar, **devuelva** `CONFIG.FUENTE_DATOS` a
-   `"mock-api/localidades.json"` antes de hacer commit, para que el
-   repositorio funcione solo con datos sintéticos.
+El Excel nunca se copia dentro de la carpeta del proyecto: el script lo lee
+desde donde esté (por ejemplo, el escritorio).
 
 ## Versión publicada (GitHub Pages)
 
 El workflow `.github/workflows/pages.yml` (en la raíz del repositorio) publica
-el widget con los datos de ejemplo cada vez que se suben cambios a `main`
-dentro de `widget/`. Solo publica `index.html` y `mock-api/localidades.json`.
+el widget cada vez que se suben cambios a `main` dentro de `widget/`. Solo
+publica `index.html` y los dos archivos de conteo de `mock-api/` (el real y el
+de ejemplo).
 
 Dirección: https://consultorio-contable-javeriano.github.io/Modulo-Visualizacion/
 
@@ -145,7 +157,8 @@ Una vez esté publicado en algún servidor (el de la FCEA, GitHub Pages, u otro)
 - [ ] **Contrato de respuesta**: arreglo JSON
       `[{ "codigo_loc": "8", "nombre": "Kennedy", "cantidad": 196 }, ...]`,
       con `codigo_loc` = código de localidad 1–20 y `cantidad` = personas
-      únicas (sin duplicados), siempre agregado por localidad.
+      únicas (sin duplicados), siempre agregado por localidad. Localidades con
+      1–4 personas: `"cantidad": null, "menos_de": 5` (ver arriba).
 - [ ] **CORS habilitado** en el backend Spring Boot para el dominio donde se
       publique este widget (por ejemplo con `@CrossOrigin(origins = "...")` o
       una configuración global de CORS). Sin esto el navegador bloquea la

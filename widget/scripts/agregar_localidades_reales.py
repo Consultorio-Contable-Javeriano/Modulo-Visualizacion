@@ -13,15 +13,18 @@ Privacidad (Ley 1581 de 2012):
   descartan en la misma lectura (`usecols`).
 - La salida es únicamente un conteo agregado de personas por localidad, sin
   nada a nivel de persona.
-- La salida queda ignorada por git (ver `.gitignore` en la raíz). No la suba
-  al repositorio ni la comparta.
+- Las localidades con entre 1 y 4 personas se publican como "menos de 5"
+  (`"cantidad": null, "menos_de": 5`): el número exacto no se escribe en la
+  salida, para que nadie pueda deducir quién se inscribió.
+- La salida es pública (se sube al repositorio y se publica en el mapa), por
+  eso nunca debe contener nada más que este conteo.
 
 Uso (desde la carpeta raíz del repositorio):
 
     .venv/bin/python widget/scripts/agregar_localidades_reales.py "/ruta/al/Excel.xlsx"
 
-Por defecto escribe `widget/datos_reales_localidades.json`; se puede cambiar
-con `--salida`.
+Por defecto escribe `widget/mock-api/datos_reales_localidades.json`, que es
+el archivo que lee el widget; se puede cambiar con `--salida`.
 """
 
 import argparse
@@ -36,7 +39,10 @@ import pandas as pd
 
 CARPETA_WIDGET = Path(__file__).resolve().parent.parent
 INDEX_HTML = CARPETA_WIDGET / "index.html"
-SALIDA_POR_DEFECTO = CARPETA_WIDGET / "datos_reales_localidades.json"
+SALIDA_POR_DEFECTO = CARPETA_WIDGET / "mock-api" / "datos_reales_localidades.json"
+
+# Conteos entre 1 y UMBRAL_RESERVA - 1 se publican como "menos de UMBRAL_RESERVA".
+UMBRAL_RESERVA = 5
 
 
 def normalizar(texto):
@@ -134,13 +140,15 @@ def main():
 
     # Se incluyen las 20 localidades, también las que tienen 0, para que el
     # mapa no las pinte como "sin datos".
-    resultado = sorted(
-        (
-            {"codigo_loc": codigo, "nombre": nombre, "cantidad": conteo[clave]}
-            for clave, (codigo, nombre) in oficiales.items()
-        ),
-        key=lambda r: -r["cantidad"],
-    )
+    resultado = []
+    for clave, (codigo, nombre) in sorted(oficiales.items(), key=lambda x: -conteo[x[0]]):
+        n = conteo[clave]
+        if 0 < n < UMBRAL_RESERVA:
+            resultado.append({"codigo_loc": codigo, "nombre": nombre,
+                              "cantidad": None, "menos_de": UMBRAL_RESERVA})
+        else:
+            resultado.append({"codigo_loc": codigo, "nombre": nombre, "cantidad": n})
+    reservadas = [r["nombre"] for r in resultado if r["cantidad"] is None]
 
     # Mismo formato que mock-api/localidades.json: el arreglo que espera el
     # widget (contrato de la API).
@@ -151,6 +159,7 @@ def main():
 
     print(f"\nValores de localidad leídos: {len(valores)}")
     print(f"Emparejados con una localidad oficial: {sum(conteo.values())}")
+    print(f"Publicadas como 'menos de {UMBRAL_RESERVA}': {', '.join(reservadas) or 'ninguna'}")
     print(f"Archivo generado: {args.salida}")
     if no_emparejados:
         print("\n⚠️  Valores que NO se pudieron emparejar (no se contaron):")

@@ -17,7 +17,8 @@ API y pendientes con el subgrupo de registro en
 
 - La información se muestra siempre agregada por localidad, nunca por
   dirección ni por persona.
-- Este repositorio solo contiene datos sintéticos de ejemplo. El Excel del
-  Consultorio (`*.xlsx`) y cualquier conteo derivado de datos reales
-  (`datos_reales_localidades.json`) están en `.gitignore` y nunca deben
-  subirse.
+- Se pueden usar y publicar datos reales, pero solo como conteo de personas
+  por localidad. Las localidades con entre 1 y 4 personas se muestran como
+  "menos de 5".
+- El Excel del Consultorio (`*.xlsx`) y cualquier dato de una persona nunca
+  se suben al repositorio (`*.xlsx` está en `.gitignore`).

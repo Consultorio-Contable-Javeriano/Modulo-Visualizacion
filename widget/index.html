@@ -95,9 +95,13 @@
 // datos de prueba a la API real del módulo de registro.
 // =============================================================================
 const CONFIG = {
-  // Datos de ejemplo (sintéticos), como archivo junto a esta página. Funciona
-  // igual en GitHub Pages y en local con `npm run mock-api` (ver README).
-  FUENTE_DATOS: "mock-api/localidades.json",
+  // Conteo real por localidad (generado con scripts/agregar_localidades_reales.py
+  // a partir del Excel de inscripción). Funciona igual en GitHub Pages y en
+  // local con `npm run mock-api` (ver README).
+  FUENTE_DATOS: "mock-api/datos_reales_localidades.json",
+
+  // Datos de ejemplo (sintéticos), para pruebas:
+  // FUENTE_DATOS: "mock-api/localidades.json",
 
   // Para simular una API en otro servidor (otro puerto, con CORS):
   // FUENTE_DATOS: "http://localhost:3001/localidades",
@@ -108,11 +112,14 @@ const CONFIG = {
 
   // Muestra un aviso de "datos de ejemplo" en el encabezado. Poner en false
   // al conectar la API real.
-  DATOS_DE_EJEMPLO: true,
+  DATOS_DE_EJEMPLO: false,
 };
 
 // Se espera que FUENTE_DATOS devuelva directamente un arreglo JSON así:
 //   [{ "codigo_loc": "8", "nombre": "Kennedy", "cantidad": 196 }, ...]
+// Para proteger la privacidad, una localidad con muy pocas personas llega sin
+// el número exacto: { "codigo_loc": "13", "nombre": "Teusaquillo",
+// "cantidad": null, "menos_de": 5 } y se muestra como "menos de 5".
 
 document.getElementById("fuente-label").textContent = CONFIG.FUENTE_DATOS;
 document.getElementById("aviso-ejemplo").hidden = !CONFIG.DATOS_DE_EJEMPLO;
@@ -168,10 +175,22 @@ async function iniciar() {
   const localidades = await cargarDatos();
   if (!localidades) return; // el panel de error ya quedó visible
 
-  const conteoPorCodigo = {};
-  localidades.forEach(r => { conteoPorCodigo[String(r.codigo_loc)] = r.cantidad; });
+  const registroPorCodigo = {};
+  localidades.forEach(r => { registroPorCodigo[String(r.codigo_loc)] = r; });
 
-  const valores = localidades.map(r => r.cantidad).sort((a, b) => a - b);
+  // Valor usado para el color. En las localidades reservadas ("menos de N")
+  // el número real está entre 1 y N-1, así que se colorean con N-1.
+  function valorParaColor(r) {
+    if (!r) return undefined;
+    if (r.cantidad === null && r.menos_de) return r.menos_de - 1;
+    return r.cantidad;
+  }
+  function textoCantidad(r) {
+    if (r && r.cantidad === null && r.menos_de) return `menos de ${r.menos_de}`;
+    return ((r && r.cantidad) ?? 0).toLocaleString("es-CO");
+  }
+
+  const valores = localidades.map(r => r.cantidad).filter(v => typeof v === "number").sort((a, b) => a - b);
   // Cortes enteros y sin repetir, para que los rangos de la leyenda no se
   // solapen (p. ej. "0–4", "5–10" en vez de "0–4", "4–10").
   const CORTES = [...new Set([0.2, 0.4, 0.6, 0.8, 0.95].map(q => Math.round(cuantil(valores, q))))];
@@ -200,7 +219,7 @@ async function iniciar() {
   };
   panelInfo.actualizar = function (props) {
     this._div.innerHTML = props
-      ? `<h4>${props.nombre}</h4><div class="valor">${(conteoPorCodigo[props.codigo_loc] ?? 0).toLocaleString("es-CO")}</div><div class="hint">personas atendidas</div>`
+      ? `<h4>${props.nombre}</h4><div class="valor">${textoCantidad(registroPorCodigo[props.codigo_loc])}</div><div class="hint">personas atendidas</div>`
       : `<h4>Localidad</h4><div class="hint">pasa el cursor sobre el mapa</div>`;
   };
   panelInfo.addTo(mapa);
@@ -223,7 +242,7 @@ async function iniciar() {
 
   function estiloFeature(feature) {
     const codigo = String(feature.properties.codigo_loc);
-    return { fillColor: colorPorValor(conteoPorCodigo[codigo]), weight: 1, color: "#ffffff", fillOpacity: 0.85 };
+    return { fillColor: colorPorValor(valorParaColor(registroPorCodigo[codigo])), weight: 1, color: "#ffffff", fillOpacity: 0.85 };
   }
 
   let capaGeoJSON;
@@ -243,7 +262,7 @@ async function iniciar() {
     onEachFeature: (feature, capa) => {
       capa.on({ mouseover: resaltar, mouseout: quitarResalte });
       capa.bindTooltip(
-        `${feature.properties.nombre}: ${(conteoPorCodigo[String(feature.properties.codigo_loc)] ?? 0).toLocaleString("es-CO")}`,
+        `${feature.properties.nombre}: ${textoCantidad(registroPorCodigo[String(feature.properties.codigo_loc)])}`,
         { sticky: true }
       );
     }

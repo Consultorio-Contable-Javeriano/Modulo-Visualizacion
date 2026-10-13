@@ -6,8 +6,7 @@ __pycache__/
 node_modules/
 *.log
 
-# Nunca versionar el Excel original del Consultorio (en ninguna carpeta) ni
-# ningún conteo derivado de datos reales de personas: en el repositorio solo
-# van datos sintéticos de ejemplo.
+# Nunca versionar el Excel original del Consultorio (en ninguna carpeta): tiene
+# datos privados de las personas inscritas. Lo único que se sube es el conteo
+# agregado por localidad (widget/mock-api/datos_reales_localidades.json).
 *.xlsx
-datos_reales_localidades.json
