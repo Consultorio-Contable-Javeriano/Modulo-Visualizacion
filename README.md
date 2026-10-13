@@ -1,5 +1,12 @@
 # Mapa de participación — Consultorio Contable Javeriano
 
+> **Widget de geolocalización (Leaflet + OpenStreetMap):** está en la
+> carpeta [`widget/`](widget/). Es el entregable oficial del módulo y se
+> embebe por `<iframe>` en la página del Consultorio. Instrucciones, contrato
+> de la API y pendientes con el subgrupo de registro en
+> [`widget/README.md`](widget/README.md). Lo que sigue en este README
+> describe el prototipo anterior en Streamlit.
+
 Aplicación web (Streamlit) que muestra, sobre un mapa interactivo de
 Colombia, cuántas personas se inscriben a las capacitaciones del
 Consultorio Contable Javeriano, por municipio y departamento.

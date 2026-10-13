@@ -7,3 +7,13 @@ __pycache__/
 # repositorio. Súbalos manualmente desde la app cuando la despliegue,
 # o pida al resto del grupo que coloque su copia local en esta carpeta.
 data/*.xlsx
+
+# --- Widget de geolocalización (carpeta widget/) ---
+node_modules/
+*.log
+
+# Nunca versionar el Excel original del Consultorio (en ninguna carpeta) ni
+# ningún conteo derivado de datos reales de personas: en el repositorio solo
+# van datos sintéticos de ejemplo.
+*.xlsx
+datos_reales_localidades.json
