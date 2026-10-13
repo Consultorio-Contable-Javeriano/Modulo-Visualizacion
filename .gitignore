@@ -2,12 +2,6 @@
 __pycache__/
 *.pyc
 
-# Excel(s) de inscripción: contienen datos personales (nombres,
-# teléfonos, números de identificación) y NO deben subirse al
-# repositorio. Súbalos manualmente desde la app cuando la despliegue,
-# o pida al resto del grupo que coloque su copia local en esta carpeta.
-data/*.xlsx
-
 # --- Widget de geolocalización (carpeta widget/) ---
 node_modules/
 *.log

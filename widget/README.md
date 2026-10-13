@@ -78,8 +78,9 @@ columnas cuyo encabezado contiene "Localidad" (el resto de columnas —nombre,
 identificación, teléfono, correo, etc.— nunca se cargan) y produce solo un
 conteo por localidad.
 
-1. Desde la **raíz del repositorio** (no desde `widget/`), con el entorno
-   virtual de Python del proyecto:
+1. Desde la **raíz del repositorio** (no desde `widget/`), con un entorno
+   virtual de Python (solo la primera vez: `python3 -m venv .venv` y
+   `.venv/bin/pip install -r widget/scripts/requirements.txt`):
 
    ```bash
    .venv/bin/python widget/scripts/agregar_localidades_reales.py "/ruta/al/Excel.xlsx"
