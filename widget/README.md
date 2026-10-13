@@ -84,10 +84,15 @@ explícitamente.
 ## Cómo probarlo con una distribución real (sin usar datos reales en el repo)
 
 Mientras no exista la API real, se puede generar una distribución más
-realista a partir del Excel del Consultorio. El script lee ÚNICAMENTE las
-columnas cuyo encabezado contiene "Localidad" (el resto de columnas —nombre,
-identificación, teléfono, correo, etc.— nunca se cargan) y produce solo un
-conteo por localidad.
+realista a partir del Excel del Consultorio. El script lee ÚNICAMENTE:
+
+- las columnas cuyo encabezado contiene "Localidad";
+- "Número de Identificación" y "Hora de inicio", solo para quitar
+  inscripciones repetidas de una misma persona (se conserva la más reciente).
+  Se usan únicamente en memoria: nunca se imprimen ni se guardan.
+
+El resto de columnas (nombre, teléfono, correo, etc.) nunca se cargan, y la
+salida es solo un conteo de personas por localidad.
 
 1. Desde la **raíz del repositorio** (no desde `widget/`), con un entorno
    virtual de Python (solo la primera vez: `python3 -m venv .venv` y
@@ -112,10 +117,6 @@ conteo por localidad.
 4. Al terminar, **devuelva** `CONFIG.FUENTE_DATOS` a
    `"mock-api/localidades.json"` antes de hacer commit, para que el
    repositorio funcione solo con datos sintéticos.
-
-Limitación: como el script no puede leer el número de identificación, no
-elimina inscripciones duplicadas de una misma persona. Para la prueba visual
-esto es aceptable; la API real del registro sí debería contar personas únicas.
 
 ## Versión publicada (GitHub Pages)
 

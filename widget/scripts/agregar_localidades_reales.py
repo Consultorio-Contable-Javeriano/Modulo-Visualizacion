@@ -4,11 +4,15 @@ Bogotá) a partir del Excel de inscripción del Consultorio, para probar el
 widget localmente con una distribución real.
 
 Privacidad (Ley 1581 de 2012):
-- Del Excel SOLO se leen las columnas cuyo encabezado contiene "Localidad".
-  Las demás columnas (nombre, identificación, teléfono, correo, etc.) nunca se
-  cargan en memoria: se descartan en la misma lectura (`usecols`).
-- La salida es únicamente un conteo agregado por localidad, sin nada a nivel
-  de persona.
+- Del Excel SOLO se leen:
+  * las columnas cuyo encabezado contiene "Localidad";
+  * "Número de Identificación" y "Hora de inicio", únicamente para quitar
+    inscripciones repetidas de una misma persona (se conserva la más
+    reciente). Se usan solo en memoria: nunca se imprimen ni se guardan.
+  Las demás columnas (nombre, teléfono, correo, etc.) nunca se cargan: se
+  descartan en la misma lectura (`usecols`).
+- La salida es únicamente un conteo agregado de personas por localidad, sin
+  nada a nivel de persona.
 - La salida queda ignorada por git (ver `.gitignore` en la raíz). No la suba
   al repositorio ni la comparta.
 
@@ -70,22 +74,43 @@ SINONIMOS = {
 }
 
 
-def leer_solo_localidades(ruta_excel):
-    """Devuelve una lista con el valor de localidad de cada fila. Ninguna otra
-    columna del Excel se carga."""
-    columnas = [
-        c for c in pd.read_excel(ruta_excel, nrows=0).columns if "LOCALIDAD" in normalizar(c)
-    ]
-    if not columnas:
+def buscar_columna(encabezados, nombre):
+    for c in encabezados:
+        if normalizar(c) == nombre:
+            return c
+    sys.exit(f"El Excel no tiene la columna '{nombre}'.")
+
+
+def leer_localidades_por_persona(ruta_excel):
+    """Devuelve una lista con la localidad de cada persona (una por persona,
+    de su inscripción más reciente). Solo se cargan las columnas de localidad,
+    identificación y hora de inicio."""
+    encabezados = pd.read_excel(ruta_excel, nrows=0).columns
+    col_localidad = [c for c in encabezados if "LOCALIDAD" in normalizar(c)]
+    if not col_localidad:
         sys.exit("El Excel no tiene ninguna columna con 'Localidad' en el encabezado.")
+    col_id = buscar_columna(encabezados, "NUMERO DE IDENTIFICACION")
+    col_fecha = buscar_columna(encabezados, "HORA DE INICIO")
+
     print("Columnas leídas (solo estas):")
-    for c in columnas:
+    for c in [*col_localidad, col_id, col_fecha]:
         print(f"  - {normalizar(c)[:90]}")
 
-    df = pd.read_excel(ruta_excel, usecols=columnas, dtype=str)
+    df = pd.read_excel(ruta_excel, usecols=[*col_localidad, col_id, col_fecha], dtype=str)
     # Una persona responde una sola de estas preguntas (virtual o presencial),
     # así que se toma el primer valor no vacío de cada fila.
-    return df.bfill(axis=1).iloc[:, 0].dropna().tolist()
+    df["localidad"] = df[col_localidad].bfill(axis=1).iloc[:, 0]
+
+    # Quitar inscripciones repetidas: misma identificación (solo dígitos) ->
+    # se conserva la más reciente. Las filas sin identificación se cuentan
+    # tal cual, porque no hay forma de saber si están repetidas.
+    df["_id"] = df[col_id].str.replace(r"\D", "", regex=True).replace("", None)
+    df["_fecha"] = pd.to_datetime(df[col_fecha], errors="coerce")
+    df = df.sort_values("_fecha")
+    repetidas = df["_id"].notna() & df["_id"].duplicated(keep="last")
+    print(f"\nInscripciones repetidas descartadas: {repetidas.sum()}")
+
+    return df.loc[~repetidas, "localidad"].dropna().tolist()
 
 
 def main():
@@ -95,7 +120,7 @@ def main():
     args = parser.parse_args()
 
     oficiales = cargar_localidades_oficiales()
-    valores = leer_solo_localidades(args.excel)
+    valores = leer_localidades_por_persona(args.excel)
 
     conteo = Counter()
     no_emparejados = Counter()
