@@ -35,6 +35,9 @@
   header .nota { margin-top: 4px; font-size: 11px; color: var(--muted); }
   header .aviso { margin-top: 4px; font-size: 11px; color: var(--text-secondary); font-weight: 600; }
   header .aviso[hidden] { display: none; }
+  header .resumen { margin-top: 2px; font-weight: 600; color: var(--text-primary); }
+  header .advertencia { margin-top: 4px; font-size: 11px; color: var(--critical); }
+  header [hidden] { display: none; }
   #mapa { flex: 1 1 auto; min-height: 320px; position: relative; }
   .leaflet-container { background: var(--surface-1); font-family: inherit; }
 
@@ -47,6 +50,12 @@
   #estado[hidden] { display: none; }
   #estado.error { color: var(--critical); }
   #estado .detalle { font-size: 11.5px; color: var(--muted); margin-top: 6px; max-width: 420px; }
+  #estado button {
+    margin-top: 12px; padding: 6px 14px; font: inherit; font-size: 12.5px;
+    color: var(--text-primary); background: var(--surface-1);
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+  }
+  #estado button:hover { border-color: var(--text-secondary); }
 
   .panel-info {
     background: rgba(252,252,251,0.95);
@@ -81,6 +90,8 @@
   <header>
     <h1>Consultorio Contable Javeriano — Personas atendidas por localidad</h1>
     <p>Bogotá D.C. · conteo agregado, sin direcciones exactas</p>
+    <p class="resumen" id="resumen-datos" hidden></p>
+    <p class="advertencia" id="advertencia" hidden></p>
     <p class="nota">Módulo de geolocalización · fuente de datos: <code id="fuente-label">—</code></p>
     <p class="aviso" id="aviso-ejemplo" hidden>Datos de ejemplo (sintéticos): no corresponden a personas reales.</p>
   </header>
@@ -113,6 +124,10 @@ const CONFIG = {
   // Muestra un aviso de "datos de ejemplo" en el encabezado. Poner en false
   // al conectar la API real.
   DATOS_DE_EJEMPLO: false,
+
+  // De qué son los datos (se muestra en el encabezado junto al total).
+  // Actualizar cuando cambien los datos (otro curso, otro semestre).
+  DESCRIPCION_DATOS: "Inscripciones Nivel 1 · segundo semestre de 2026",
 };
 
 // Se espera que FUENTE_DATOS devuelva directamente un arreglo JSON así:
@@ -138,6 +153,12 @@ function mostrarEstado(mensaje, detalle, esError) {
   panelEstado.hidden = false;
   panelEstado.classList.toggle("error", !!esError);
   panelEstado.innerHTML = `<div>${mensaje}${detalle ? `<div class="detalle">${detalle}</div>` : ""}</div>`;
+  if (esError) {
+    const boton = document.createElement("button");
+    boton.textContent = "Reintentar";
+    boton.addEventListener("click", iniciar);
+    panelEstado.firstElementChild.appendChild(boton);
+  }
 }
 function ocultarEstado() { panelEstado.hidden = true; }
 
@@ -160,6 +181,58 @@ async function cargarDatos() {
 }
 
 // ---------------------------------------------------------------------------
+// Validación de los datos recibidos: si la fuente manda registros mal formados
+// (código de localidad que no existe, cantidad que no es un número, etc.) se
+// ignoran y se avisa, en vez de pintar el mapa con datos equivocados.
+// ---------------------------------------------------------------------------
+const CODIGOS_VALIDOS = new Set(LOCALIDADES_GEOJSON.features.map(f => String(f.properties.codigo_loc)));
+
+function validarDatos(datos) {
+  const validos = [];
+  const problemas = [];
+  const vistos = new Set();
+  datos.forEach((r, i) => {
+    const codigo = r && r.codigo_loc !== undefined ? String(r.codigo_loc) : null;
+    const etiqueta = (r && r.nombre) || `registro ${i + 1}`;
+    if (!codigo || !CODIGOS_VALIDOS.has(codigo)) {
+      problemas.push(`${etiqueta}: código de localidad desconocido (${codigo})`);
+    } else if (vistos.has(codigo)) {
+      problemas.push(`${etiqueta}: localidad repetida (código ${codigo})`);
+    } else if (!(Number.isInteger(r.cantidad) && r.cantidad >= 0) &&
+               !(r.cantidad === null && Number.isInteger(r.menos_de) && r.menos_de > 1)) {
+      problemas.push(`${etiqueta}: cantidad inválida (${JSON.stringify(r.cantidad)})`);
+    } else {
+      vistos.add(codigo);
+      validos.push(r);
+    }
+  });
+  return { validos, problemas };
+}
+
+function mostrarResumen(localidades) {
+  const exacto = localidades.reduce((s, r) => s + (r.cantidad ?? 0), 0);
+  const reservadas = localidades.filter(r => r.cantidad === null).length;
+  // Las localidades "menos de N" tienen al menos 1 persona cada una, pero su
+  // número exacto no se conoce: por eso el total se da como mínimo.
+  const total = reservadas
+    ? `al menos ${(exacto + reservadas).toLocaleString("es-CO")} personas`
+    : `${exacto.toLocaleString("es-CO")} personas`;
+  const resumen = document.getElementById("resumen-datos");
+  resumen.textContent = [CONFIG.DESCRIPCION_DATOS, total].filter(Boolean).join(" · ");
+  resumen.hidden = false;
+}
+
+function mostrarAdvertencia(problemas) {
+  const aviso = document.getElementById("advertencia");
+  aviso.hidden = problemas.length === 0;
+  if (!problemas.length) return;
+  console.warn("Registros ignorados por datos inválidos:", problemas);
+  const muestra = problemas.slice(0, 3).join("; ");
+  aviso.textContent = `Atención: se ignoraron ${problemas.length} registro(s) con datos inválidos — ${muestra}` +
+    (problemas.length > 3 ? "; …" : "") + ".";
+}
+
+// ---------------------------------------------------------------------------
 // Dibujo del mapa — genérico, no depende de si los datos son de prueba o reales
 // ---------------------------------------------------------------------------
 function cuantil(arr, q) {
@@ -172,8 +245,20 @@ function cuantil(arr, q) {
 const RAMPA = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95"];
 
 async function iniciar() {
-  const localidades = await cargarDatos();
-  if (!localidades) return; // el panel de error ya quedó visible
+  const datos = await cargarDatos();
+  if (!datos) return; // el panel de error ya quedó visible
+
+  const { validos: localidades, problemas } = validarDatos(datos);
+  mostrarAdvertencia(problemas);
+  if (!localidades.length) {
+    mostrarEstado(
+      "Los datos recibidos no tienen ninguna localidad válida.",
+      `Revise que la fuente de datos (${CONFIG.FUENTE_DATOS}) responda con el formato acordado (ver README).`,
+      true
+    );
+    return;
+  }
+  mostrarResumen(localidades);
 
   const registroPorCodigo = {};
   localidades.forEach(r => { registroPorCodigo[String(r.codigo_loc)] = r; });
