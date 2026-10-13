@@ -1,0 +1,102 @@
+[
+  {
+    "codigo_loc": "8",
+    "nombre": "Kennedy",
+    "cantidad": 196
+  },
+  {
+    "codigo_loc": "10",
+    "nombre": "Engativá",
+    "cantidad": 176
+  },
+  {
+    "codigo_loc": "19",
+    "nombre": "Ciudad Bolívar",
+    "cantidad": 167
+  },
+  {
+    "codigo_loc": "1",
+    "nombre": "Usaquén",
+    "cantidad": 142
+  },
+  {
+    "codigo_loc": "11",
+    "nombre": "Suba",
+    "cantidad": 141
+  },
+  {
+    "codigo_loc": "18",
+    "nombre": "Rafael Uribe Uribe",
+    "cantidad": 140
+  },
+  {
+    "codigo_loc": "7",
+    "nombre": "Bosa",
+    "cantidad": 136
+  },
+  {
+    "codigo_loc": "5",
+    "nombre": "Usme",
+    "cantidad": 127
+  },
+  {
+    "codigo_loc": "4",
+    "nombre": "San Cristóbal",
+    "cantidad": 91
+  },
+  {
+    "codigo_loc": "2",
+    "nombre": "Chapinero",
+    "cantidad": 71
+  },
+  {
+    "codigo_loc": "9",
+    "nombre": "Fontibón",
+    "cantidad": 62
+  },
+  {
+    "codigo_loc": "16",
+    "nombre": "Puente Aranda",
+    "cantidad": 59
+  },
+  {
+    "codigo_loc": "3",
+    "nombre": "Santa Fe",
+    "cantidad": 53
+  },
+  {
+    "codigo_loc": "6",
+    "nombre": "Tunjuelito",
+    "cantidad": 52
+  },
+  {
+    "codigo_loc": "14",
+    "nombre": "Los Mártires",
+    "cantidad": 51
+  },
+  {
+    "codigo_loc": "12",
+    "nombre": "Barrios Unidos",
+    "cantidad": 50
+  },
+  {
+    "codigo_loc": "13",
+    "nombre": "Teusaquillo",
+    "cantidad": 37
+  },
+  {
+    "codigo_loc": "15",
+    "nombre": "Antonio Nariño",
+    "cantidad": 23
+  },
+  {
+    "codigo_loc": "17",
+    "nombre": "La Candelaria",
+    "cantidad": 8
+  },
+  {
+    "codigo_loc": "20",
+    "nombre": "Sumapaz",
+    "cantidad": 5
+  }
+]

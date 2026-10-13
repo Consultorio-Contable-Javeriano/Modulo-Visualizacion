@@ -1,0 +1,41 @@
+# Publica el widget (con datos de ejemplo) en GitHub Pages cada vez que hay
+# cambios en main dentro de widget/. Solo se publican los archivos listados en
+# el paso "Preparar sitio": nunca datos reales (además, esos no están en git).
+name: Publicar widget en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["widget/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar sitio
+        run: |
+          mkdir -p _site/mock-api
+          cp widget/index.html _site/
+          cp widget/mock-api/localidades.json _site/mock-api/
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: despliegue
+        uses: actions/deploy-pages@v4

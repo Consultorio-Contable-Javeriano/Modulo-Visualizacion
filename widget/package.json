@@ -2,8 +2,7 @@
   "name": "consultorio-contable-geolocalizacion",
   "private": true,
   "scripts": {
-    "mock-api": "json-server mock-api/db.json --port 3001",
-    "api-datos-reales": "json-server datos_reales_localidades.json --port 3002"
+    "mock-api": "json-server mock-api/db.js --static . --port 3001"
   },
   "devDependencies": {
     "json-server": "^0.17.4"

@@ -33,6 +33,8 @@
   header h1 { font-size: 16px; margin: 0 0 2px; font-weight: 700; }
   header p { margin: 0; font-size: 12.5px; color: var(--text-secondary); }
   header .nota { margin-top: 4px; font-size: 11px; color: var(--muted); }
+  header .aviso { margin-top: 4px; font-size: 11px; color: var(--text-secondary); font-weight: 600; }
+  header .aviso[hidden] { display: none; }
   #mapa { flex: 1 1 auto; min-height: 320px; position: relative; }
   .leaflet-container { background: var(--surface-1); font-family: inherit; }
 
@@ -80,6 +82,7 @@
     <h1>Consultorio Contable Javeriano — Personas atendidas por localidad</h1>
     <p>Bogotá D.C. · conteo agregado, sin direcciones exactas</p>
     <p class="nota">Módulo de geolocalización · fuente de datos: <code id="fuente-label">—</code></p>
+    <p class="aviso" id="aviso-ejemplo" hidden>Datos de ejemplo (sintéticos): no corresponden a personas reales.</p>
   </header>
   <div id="mapa">
     <div id="estado">Cargando datos…</div>
@@ -92,18 +95,27 @@
 // datos de prueba a la API real del módulo de registro.
 // =============================================================================
 const CONFIG = {
-  // Mientras se prueba localmente con json-server (ver README):
-  FUENTE_DATOS: "http://localhost:3001/localidades",
+  // Datos de ejemplo (sintéticos), como archivo junto a esta página. Funciona
+  // igual en GitHub Pages y en local con `npm run mock-api` (ver README).
+  FUENTE_DATOS: "mock-api/localidades.json",
 
-  // Cuando el módulo de registro exponga la API real, cambiar SOLO esta línea
+  // Para simular una API en otro servidor (otro puerto, con CORS):
+  // FUENTE_DATOS: "http://localhost:3001/localidades",
+
+  // Cuando el módulo de registro exponga la API real, cambiar esta línea
   // por algo como:
   // FUENTE_DATOS: "https://<dominio-consultorio>/api/geolocalizacion/localidades",
+
+  // Muestra un aviso de "datos de ejemplo" en el encabezado. Poner en false
+  // al conectar la API real.
+  DATOS_DE_EJEMPLO: true,
 };
 
 // Se espera que FUENTE_DATOS devuelva directamente un arreglo JSON así:
 //   [{ "codigo_loc": "8", "nombre": "Kennedy", "cantidad": 196 }, ...]
 
 document.getElementById("fuente-label").textContent = CONFIG.FUENTE_DATOS;
+document.getElementById("aviso-ejemplo").hidden = !CONFIG.DATOS_DE_EJEMPLO;
 
 // ---------------------------------------------------------------------------
 // GEOMETRÍA DE LAS 20 LOCALIDADES DE BOGOTÁ (no cambia, se deja embebida)
@@ -160,12 +172,18 @@ async function iniciar() {
   localidades.forEach(r => { conteoPorCodigo[String(r.codigo_loc)] = r.cantidad; });
 
   const valores = localidades.map(r => r.cantidad).sort((a, b) => a - b);
-  const CORTES = [0.2, 0.4, 0.6, 0.8, 0.95].map(q => cuantil(valores, q));
+  // Cortes enteros y sin repetir, para que los rangos de la leyenda no se
+  // solapen (p. ej. "0–4", "5–10" en vez de "0–4", "4–10").
+  const CORTES = [...new Set([0.2, 0.4, 0.6, 0.8, 0.95].map(q => Math.round(cuantil(valores, q))))];
+  // Si hay menos cortes (datos con pocos valores distintos), se reparten los
+  // colores de la rampa de claro a oscuro.
+  const COLORES = Array.from({ length: CORTES.length + 1 },
+    (_, i) => RAMPA[Math.round(i * (RAMPA.length - 1) / CORTES.length)]);
 
   function colorPorValor(v) {
     if (v === undefined || v === null) return "#e7e6e1";
-    for (let i = 0; i < CORTES.length; i++) if (v <= CORTES[i]) return RAMPA[i];
-    return RAMPA[RAMPA.length - 1];
+    for (let i = 0; i < CORTES.length; i++) if (v <= CORTES[i]) return COLORES[i];
+    return COLORES[COLORES.length - 1];
   }
 
   const mapa = L.map("mapa", { scrollWheelZoom: true }).setView([4.65, -74.1], 10.3);
@@ -190,13 +208,13 @@ async function iniciar() {
   const panelLeyenda = L.control({ position: "bottomright" });
   panelLeyenda.onAdd = function () {
     const div = L.DomUtil.create("div", "panel-legend");
-    const limites = [0, ...CORTES];
     let filas = "";
-    for (let i = 0; i < RAMPA.length; i++) {
-      const desde = Math.round(limites[i]);
-      const hasta = i < CORTES.length ? Math.round(CORTES[i]) : null;
-      const etiqueta = hasta !== null ? `${desde}–${hasta}` : `> ${desde}`;
-      filas += `<div class="fila"><span class="chip" style="background:${RAMPA[i]}"></span>${etiqueta}</div>`;
+    for (let i = 0; i < COLORES.length; i++) {
+      const desde = i === 0 ? 0 : CORTES[i - 1] + 1;
+      const hasta = CORTES[i];
+      const etiqueta = hasta === undefined ? `${desde} o más`
+        : desde === hasta ? `${desde}` : `${desde}–${hasta}`;
+      filas += `<div class="fila"><span class="chip" style="background:${COLORES[i]}"></span>${etiqueta}</div>`;
     }
     div.innerHTML = `<div class="titulo">Personas atendidas</div>${filas}`;
     return div;
@@ -231,7 +249,17 @@ async function iniciar() {
     }
   }).addTo(mapa);
 
-  mapa.fitBounds(capaGeoJSON.getBounds(), { padding: [12, 12] });
+  // Encuadre inicial sobre la zona urbana: Sumapaz (20) es casi toda rural y
+  // tan grande que, si se incluye, las demás localidades se ven diminutas.
+  // Sigue visible al alejar el mapa.
+  const CODIGOS_FUERA_DEL_ENCUADRE = ["20"];
+  const limitesUrbanos = L.latLngBounds([]);
+  capaGeoJSON.eachLayer(capa => {
+    if (!CODIGOS_FUERA_DEL_ENCUADRE.includes(String(capa.feature.properties.codigo_loc))) {
+      limitesUrbanos.extend(capa.getBounds());
+    }
+  });
+  mapa.fitBounds(limitesUrbanos, { padding: [12, 12] });
   ocultarEstado();
 }
 

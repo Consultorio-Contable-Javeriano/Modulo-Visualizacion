@@ -16,11 +16,13 @@ de prueba a datos reales es cuestión de cambiar una sola línea.
   `decolector/bta-geodata`, ya recortado y simplificado): van embebidos
   dentro de `index.html` (constante `LOCALIDADES_GEOJSON`) porque es
   geografía fija, nunca cambia.
-- `mock-api/db.json` — datos de ejemplo (sintéticos, no son información real
-  de personas atendidas) usados para levantar una API de prueba local.
-- `package.json` — define `npm run mock-api` para levantar esa API de prueba
-  y `npm run api-datos-reales` para la prueba local con conteos reales (ver
-  abajo).
+- `mock-api/localidades.json` — datos de ejemplo (sintéticos, no son
+  información real de personas atendidas), ya en el formato exacto de la API.
+  Es la fuente de datos por defecto del widget.
+- `mock-api/db.js` — adaptador para que `json-server` sirva ese mismo archivo
+  como API en `http://localhost:3001/localidades`.
+- `package.json` — define `npm run mock-api`, que levanta un servidor local con
+  el widget y la API de prueba.
 - `scripts/agregar_localidades_reales.py` — genera los conteos reales por
   localidad a partir del Excel del Consultorio (solo para pruebas locales).
 
@@ -29,13 +31,19 @@ salvo que se indique otra cosa.
 
 ## Cómo probarlo localmente (con datos de ejemplo)
 
-1. `npm install` (instala `json-server`, que simula una API real a partir de
-   un archivo JSON — así se prueba el mismo código de `fetch` que se usará
-   con la API real, no solo un objeto fijo en el código).
-2. `npm run mock-api` — levanta la API de prueba en `http://localhost:3001/localidades`.
-3. Abre `index.html` en el navegador (doble clic, o sírvelo con cualquier
-   servidor estático). Debe mostrar el mapa coloreado; si cierras la API de
-   prueba y recargas, debe aparecer un mensaje de error en vez de romperse.
+1. `npm install` (solo la primera vez; instala `json-server`).
+2. `npm run mock-api`
+3. Abra `http://localhost:3001/index.html` en el navegador. Debe mostrar el
+   mapa coloreado con el aviso "Datos de ejemplo".
+
+No funciona abriendo `index.html` con doble clic: el navegador no permite que
+una página abierta desde un archivo pida datos con `fetch`. Siempre hay que
+abrirlo a través de un servidor como el de `npm run mock-api`.
+
+Para probar el mensaje de error, cambie `CONFIG.FUENTE_DATOS` a
+`http://localhost:3001/localidades` (la API de prueba en su propia ruta, como
+será la real), recargue, y luego detenga `npm run mock-api` (Ctrl+C) y vuelva
+a recargar.
 
 ## Cómo conectar la API real cuando esté lista
 
@@ -43,13 +51,16 @@ Dentro de `index.html`, al inicio del `<script>`, está esto:
 
 ```js
 const CONFIG = {
-  FUENTE_DATOS: "http://localhost:3001/localidades",
-  // Cuando el módulo de registro exponga la API real, cambiar SOLO esta línea:
+  FUENTE_DATOS: "mock-api/localidades.json",
   // FUENTE_DATOS: "https://<dominio-consultorio>/api/geolocalizacion/localidades",
+  DATOS_DE_EJEMPLO: true,
 };
 ```
 
-Ese es el único cambio necesario. El resto del widget (coloreado, leyenda,
+Hay que poner la URL real en `FUENTE_DATOS` y cambiar `DATOS_DE_EJEMPLO` a
+`false` (quita el aviso de datos de ejemplo del encabezado).
+
+No hay que cambiar nada más. El resto del widget (coloreado, leyenda,
 tooltips, manejo de errores) ya está escrito de forma genérica y no depende
 de si la fuente es la API de prueba o la real.
 
@@ -90,22 +101,32 @@ conteo por localidad.
    valores de localidad que no pudo emparejar con las 20 oficiales (por
    ejemplo, localidades de otras ciudades). Esos no se cuentan.
 
-   El archivo usa el mismo formato que `mock-api/db.json`
-   (`{"localidades": [...]}`) para que `json-server` lo sirva igual: la ruta
-   `/localidades` responde exactamente el arreglo que espera el widget.
+   El archivo tiene el mismo formato que `mock-api/localidades.json` (el
+   contrato de la API).
 
 2. Ese archivo está en `.gitignore` (igual que cualquier `.xlsx`): no se sube.
    Para comprobarlo: `git check-ignore -v widget/datos_reales_localidades.json`.
-3. `npm run api-datos-reales` — lo sirve en `http://localhost:3002/localidades`.
-4. Cambie **temporalmente** `CONFIG.FUENTE_DATOS` en `index.html` a
-   `http://localhost:3002/localidades` y abra el widget.
-5. Al terminar, **devuelva** `CONFIG.FUENTE_DATOS` a
-   `http://localhost:3001/localidades` antes de hacer commit, para que el
+3. Cambie **temporalmente** `CONFIG.FUENTE_DATOS` en `index.html` a
+   `"datos_reales_localidades.json"`, corra `npm run mock-api` y abra
+   `http://localhost:3001/index.html`.
+4. Al terminar, **devuelva** `CONFIG.FUENTE_DATOS` a
+   `"mock-api/localidades.json"` antes de hacer commit, para que el
    repositorio funcione solo con datos sintéticos.
 
 Limitación: como el script no puede leer el número de identificación, no
 elimina inscripciones duplicadas de una misma persona. Para la prueba visual
 esto es aceptable; la API real del registro sí debería contar personas únicas.
+
+## Versión publicada (GitHub Pages)
+
+El workflow `.github/workflows/pages.yml` (en la raíz del repositorio) publica
+el widget con los datos de ejemplo cada vez que se suben cambios a `main`
+dentro de `widget/`. Solo publica `index.html` y `mock-api/localidades.json`.
+
+Dirección: https://consultorio-contable-javeriano.github.io/Modulo-Visualizacion/
+
+Configuración (una sola vez, la hace un administrador del repositorio): en
+GitHub, **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
 ## Cómo embeberlo en la página institucional
 

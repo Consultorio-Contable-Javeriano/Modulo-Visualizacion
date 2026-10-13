@@ -117,10 +117,10 @@ def main():
         key=lambda r: -r["cantidad"],
     )
 
-    # Mismo formato que mock-api/db.json: json-server lo sirve en
-    # /localidades, que responde el arreglo que espera el widget.
+    # Mismo formato que mock-api/localidades.json: el arreglo que espera el
+    # widget (contrato de la API).
     Path(args.salida).write_text(
-        json.dumps({"localidades": resultado}, ensure_ascii=False, indent=2),
+        json.dumps(resultado, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
