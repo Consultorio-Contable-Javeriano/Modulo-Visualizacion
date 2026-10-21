@@ -12,6 +12,38 @@ de 2026), generado a partir del Excel del Consultorio. Cuando el módulo de
 registro exponga su API, el widget leerá los datos de ella cambiando una sola
 línea (ver [Conectar la API real](#conectar-la-api-real)).
 
+## Cómo usarlo
+
+### Ver el mapa
+
+1. Abra la [versión publicada](https://consultorio-contable-javeriano.github.io/Modulo-Visualizacion/)
+   en cualquier navegador (computador o celular). No necesita instalar nada ni
+   iniciar sesión.
+2. Lea el encabezado: dice de qué son los datos y cuántas personas hay en
+   total.
+3. Mire los colores: entre más oscura la localidad, más personas atendidas.
+   La leyenda (abajo a la derecha) dice qué rango corresponde a cada color.
+4. Pase el cursor sobre una localidad (en celular, tóquela) para ver su nombre
+   y su cantidad, junto al cursor y en el recuadro de arriba a la derecha. Si
+   dice "menos de 5", la localidad tiene entre 1 y 4
+   personas (ver [Privacidad](#privacidad-ley-1581-de-2012)).
+5. Acerque o aleje con la rueda del mouse, con los botones **+** / **−** o
+   con dos dedos en el celular. Arrastre para moverse. Sumapaz aparece al
+   alejar el mapa hacia el sur.
+6. Si sale un mensaje de error, pulse **Reintentar**. Si sale una advertencia
+   en rojo, algunos registros llegaron mal y no se dibujaron; avise al equipo
+   del módulo.
+
+### Tareas frecuentes del equipo
+
+| Quiero... | Vaya a |
+|---|---|
+| Probar el widget en mi computador | [Cómo probarlo localmente](#cómo-probarlo-localmente) |
+| Actualizar el mapa con un Excel nuevo | [Actualizar los datos reales](#actualizar-los-datos-reales) |
+| Cambiar el texto del encabezado o la fuente de datos | [Configuración](#configuración) |
+| Conectar el mapa a la API del registro | [Conectar la API real](#conectar-la-api-real) |
+| Poner el mapa en otra página web | [Cómo embeberlo](#cómo-embeberlo-en-la-página-institucional) |
+
 ## Qué muestra
 
 - **Mapa coroplético:** cada localidad se colorea según su cantidad de

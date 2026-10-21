@@ -9,6 +9,9 @@ mapa coroplético de las 20 localidades de Bogotá, coloreado por cantidad de
 personas atendidas. Se embebe por `<iframe>` en la página institucional del
 Consultorio y consume una API de solo lectura del módulo de registro.
 
+**Ver el mapa:** https://consultorio-contable-javeriano.github.io/Modulo-Visualizacion/
+(instrucciones de uso en [`widget/README.md#cómo-usarlo`](widget/README.md#cómo-usarlo)).
+
 Todo el código está en [`widget/`](widget/). Instrucciones, contrato de la
 API y pendientes con el subgrupo de registro en
 [`widget/README.md`](widget/README.md).
