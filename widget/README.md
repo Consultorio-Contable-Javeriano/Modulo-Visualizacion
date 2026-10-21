@@ -65,18 +65,6 @@ línea (ver [Conectar la API real](#conectar-la-api-real)).
     una advertencia en rojo en el encabezado (con detalle en la consola del
     navegador). Las localidades válidas se dibujan igual.
 
-## Por qué Leaflet y OpenStreetMap
-
-Decisión validada con el interlocutor del Consultorio y la profesora del curso:
-
-- **Control total del embebido:** es una página HTML propia que se inserta con
-  un `<iframe>`, sin depender de cómo otra plataforma decide mostrarla.
-- **Sin licencias ni cuentas:** Leaflet y OpenStreetMap son libres y gratuitos.
-  Power BI requiere licencias para publicar, Google Maps requiere una clave de
-  API con facturación, y Streamlit requiere un servidor de Python corriendo.
-- **Liviano:** es un solo archivo HTML; la geometría de las localidades va
-  embebida y los datos llegan por `fetch`.
-
 ## Privacidad (Ley 1581 de 2012)
 
 - La información se muestra **siempre agregada por localidad**, nunca por
